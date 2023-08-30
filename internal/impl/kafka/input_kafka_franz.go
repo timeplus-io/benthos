@@ -205,11 +205,11 @@ func newFranzKafkaReaderFromConfig(conf *service.ParsedConfig, res *service.Reso
 		return nil, err
 	}
 
-	if f.rackID, err = conf.FieldString("rack_id"); err != nil {
+	if f.clientID, err = conf.FieldString("client_id"); err != nil {
 		return nil, err
 	}
 
-	if f.clientID, err = conf.FieldString("client_id"); err != nil {
+	if f.rackID, err = conf.FieldString("rack_id"); err != nil {
 		return nil, err
 	}
 
