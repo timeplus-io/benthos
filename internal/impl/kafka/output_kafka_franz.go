@@ -54,7 +54,7 @@ This output often out-performs the traditional ` + "`kafka`" + ` output as well 
 			Advanced()).
 		Field(service.NewStringField("rack_id").
 			Description("A rack identifier for this client.").
-			Optional().
+			Default("").
 			Advanced()).
 		Field(service.NewMetadataFilterField("metadata").
 			Description("Determine which (if any) metadata values should be added to messages as headers.").

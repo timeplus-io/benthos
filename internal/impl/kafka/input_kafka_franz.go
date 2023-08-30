@@ -73,7 +73,7 @@ Finally, it's also possible to specify an explicit offset to consume from by add
 			Advanced()).
 		Field(service.NewStringField("rack_id").
 			Description("A rack identifier for this client.").
-			Optional().
+			Default("").
 			Advanced()).
 		Field(service.NewIntField("checkpoint_limit").
 			Description("Determines how many messages of the same partition can be processed in parallel before applying back pressure. When a message of a given offset is delivered to the output the offset is only allowed to be committed when all messages of prior offsets have also been delivered, this ensures at-least-once delivery guarantees. However, this mechanism also increases the likelihood of duplicates in the event of crashes or server faults, reducing the checkpoint limit will mitigate this.").
