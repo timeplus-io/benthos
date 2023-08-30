@@ -50,7 +50,12 @@ This output often out-performs the traditional ` + "`kafka`" + ` output as well 
 			Optional()).
 		Field(service.NewStringField("client_id").
 			Description("An identifier for the client connection.").
-			Default("timeplus")).
+			Default("benthos").
+			Advanced()).
+		Field(service.NewStringField("rack_id").
+			Description("A rack identifier for this client.").
+			Optional().
+			Advanced()).
 		Field(service.NewMetadataFilterField("metadata").
 			Description("Determine which (if any) metadata values should be added to messages as headers.").
 			Optional()).
@@ -115,6 +120,7 @@ type franzKafkaWriter struct {
 	key              *service.InterpolatedString
 	partition        *service.InterpolatedString
 	clientID         string
+	rackID           string
 	tlsConf          *tls.Config
 	saslConfs        []sasl.Mechanism
 	metaFilter       *service.MetadataFilter
@@ -225,6 +231,10 @@ func newFranzKafkaWriterFromConfig(conf *service.ParsedConfig, log *service.Logg
 		return nil, err
 	}
 
+	if f.rackID, err = conf.FieldString("rack_id"); err != nil {
+		return nil, err
+	}
+
 	if conf.Contains("metadata") {
 		if f.metaFilter, err = conf.FieldMetadataFilter("metadata"); err != nil {
 			return nil, err
@@ -259,6 +269,7 @@ func (f *franzKafkaWriter) Connect(ctx context.Context) error {
 		kgo.ProducerBatchMaxBytes(f.produceMaxBytes),
 		kgo.ProduceRequestTimeout(f.timeout),
 		kgo.ClientID(f.clientID),
+		kgo.Rack(f.rackID),
 		kgo.WithLogger(&kgoLogger{f.log}),
 	}
 	if f.tlsConf != nil {
