@@ -58,15 +58,7 @@ func pulsarSepc() *service.ConfigSpec {
 		Field(service.NewIntField("max_in_flight").
 			Description("The maximum number of messages to have in flight at a given time. Increase this to improve throughput.").
 			Default(64)).
-		Field(service.NewIntField("batching_max_publish_delay").
-			Description("The time period within which the messages sent will be batched in millisecond").
-			Default(10)).
-		Field(service.NewIntField("batching_max_messages").
-			Description("The maximum number of messages permitted in a batch").
-			Default(1000)).
-		Field(service.NewIntField("batching_max_size").
-			Description("The maximum number of bytes permitted in a batch").
-			Default(128 * 1024)).
+		Field(service.NewBatchPolicyField("batching")).
 		Field(authField())
 }
 
@@ -86,10 +78,7 @@ type pulsarWriter struct {
 	key         *service.InterpolatedString
 	orderingKey *service.InterpolatedString
 
-	// batching
-	batchingMaxPublishDelay time.Duration
-	batchingMaxMessages     int
-	batchingMaxSize         int
+	batchingPolicy service.BatchPolicy
 }
 
 func newPulsarWriterFromParsed(conf *service.ParsedConfig, log *service.Logger) (p *pulsarWriter, err error) {
@@ -116,18 +105,9 @@ func newPulsarWriterFromParsed(conf *service.ParsedConfig, log *service.Logger) 
 	if p.orderingKey, err = conf.FieldInterpolatedString("ordering_key"); err != nil {
 		return
 	}
-	if p.batchingMaxMessages, err = conf.FieldInt("batching_max_messages"); err != nil {
+	if p.batchingPolicy, err = conf.FieldBatchPolicy("batch"); err != nil {
 		return
 	}
-	if p.batchingMaxSize, err = conf.FieldInt("batching_max_size"); err != nil {
-		return
-	}
-
-	batchingPeriod, err := conf.FieldInt("batching_max_publish_delay")
-	if err != nil {
-		return
-	}
-	p.batchingMaxPublishDelay = time.Duration(batchingPeriod) * time.Millisecond
 
 	return
 }
@@ -165,10 +145,15 @@ func (p *pulsarWriter) Connect(ctx context.Context) error {
 		return err
 	}
 
+	period, err := time.ParseDuration(p.batchingPolicy.Period)
+	if err != nil {
+		return err
+	}
+
 	if producer, err = client.CreateProducer(pulsar.ProducerOptions{
-		BatchingMaxPublishDelay: p.batchingMaxPublishDelay,
-		BatchingMaxMessages:     uint(p.batchingMaxMessages),
-		BatchingMaxSize:         uint(p.batchingMaxSize),
+		BatchingMaxPublishDelay: period,
+		BatchingMaxMessages:     uint(p.batchingPolicy.Count),
+		BatchingMaxSize:         uint(p.batchingPolicy.ByteSize),
 		Topic:                   p.topic,
 	}); err != nil {
 		client.Close()
