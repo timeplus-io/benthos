@@ -105,7 +105,7 @@ func newPulsarWriterFromParsed(conf *service.ParsedConfig, log *service.Logger) 
 	if p.orderingKey, err = conf.FieldInterpolatedString("ordering_key"); err != nil {
 		return
 	}
-	if p.batchingPolicy, err = conf.FieldBatchPolicy("batch"); err != nil {
+	if p.batchingPolicy, err = conf.FieldBatchPolicy("batching"); err != nil {
 		return
 	}
 
