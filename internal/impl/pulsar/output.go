@@ -265,8 +265,7 @@ func (p *pulsarWriter) WriteBatch(ctx context.Context, batch service.MessageBatc
 	return p.producer.Flush()
 }
 
-func callback(id pulsar.MessageID, m *pulsar.ProducerMessage, err error) {
-}
+func callback(_ pulsar.MessageID, _ *pulsar.ProducerMessage, _ error) {}
 
 func (p *pulsarWriter) Close(ctx context.Context) error {
 	return p.disconnect(ctx)
