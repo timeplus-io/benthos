@@ -43,6 +43,9 @@ func websocketInputSpec() *service.ConfigSpec {
 			service.NewStringField("open_message").
 				Description("An optional message to send to the server upon connection.").
 				Advanced().Optional(),
+			service.NewStringListField("open_messages").
+				Description("An optional list of messages to send to the server after open messages if specified.").
+				Advanced().Optional(),
 			service.NewStringAnnotatedEnumField("open_message_type", map[string]string{
 				string(wsOpenMsgTypeBinary): "Binary data open_message.",
 				string(wsOpenMsgTypeText):   "Text data open_message. The text message payload is interpreted as UTF-8 encoded text data.",
@@ -96,6 +99,7 @@ type websocketReader struct {
 
 	openMsgType wsOpenMsgType
 	openMsg     []byte
+	openMsgs    [][]byte
 }
 
 func newWebsocketReaderFromParsed(conf *service.ParsedConfig, mgr bundle.NewManagement) (*websocketReader, error) {
@@ -124,6 +128,15 @@ func newWebsocketReaderFromParsed(conf *service.ParsedConfig, mgr bundle.NewMana
 	ws.openMsgType = wsOpenMsgType(openMsgTypeStr)
 	if openMsgStr, _ = conf.FieldString("open_message"); openMsgStr != "" {
 		ws.openMsg = []byte(openMsgStr)
+	}
+	var openMsgsStr []string
+	if openMsgsStr, _ = conf.FieldStringList("open_messages"); openMsgsStr != nil {
+		var byteSliceSlice [][]byte
+		for _, str := range openMsgsStr {
+			byteSlice := []byte(str)
+			byteSliceSlice = append(byteSliceSlice, byteSlice)
+		}
+		ws.openMsgs = byteSliceSlice
 	}
 	return ws, nil
 }
@@ -178,6 +191,19 @@ func (w *websocketReader) Connect(ctx context.Context) error {
 	if len(w.openMsg) > 0 {
 		if err := client.WriteMessage(openMsgType, w.openMsg); err != nil {
 			return err
+		}
+	}
+
+	if len(w.openMsgs) > 0 {
+		if openMsgType == websocket.TextMessage {
+			for _, msg := range w.openMsgs {
+				if len(msg) == 0 {
+					continue
+				}
+				if err := client.WriteMessage(openMsgType, msg); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
