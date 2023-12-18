@@ -44,7 +44,7 @@ func websocketInputSpec() *service.ConfigSpec {
 				Description("An optional message to send to the server upon connection.").
 				Advanced().Optional(),
 			service.NewStringListField("open_messages").
-				Description("An optional messages to send to the server upon connection.").
+				Description("An optional list of messages to send to the server after open messages if specified.").
 				Advanced().Optional(),
 			service.NewStringAnnotatedEnumField("open_message_type", map[string]string{
 				string(wsOpenMsgTypeBinary): "Binary data open_message.",
