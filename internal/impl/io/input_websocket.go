@@ -200,12 +200,9 @@ func (w *websocketReader) Connect(ctx context.Context) error {
 				if len(msg) == 0 {
 					continue
 				}
-				// TODO: will need remove such log later cause it may contain sensitive info
-				w.log.Infof("sending open message %s to server", string(msg))
 				if err := client.WriteMessage(openMsgType, msg); err != nil {
 					return err
 				}
-				// time.Sleep(3 * time.Second) // TODO : confirm the hand shake here?
 			}
 		}
 	}
