@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
-	"time"
 
 	"github.com/gorilla/websocket"
 
@@ -44,6 +42,9 @@ func websocketInputSpec() *service.ConfigSpec {
 				Example("ws://localhost:4195/get/ws"),
 			service.NewStringField("open_message").
 				Description("An optional message to send to the server upon connection.").
+				Advanced().Optional(),
+			service.NewStringListField("open_messages").
+				Description("An optional messages to send to the server upon connection.").
 				Advanced().Optional(),
 			service.NewStringAnnotatedEnumField("open_message_type", map[string]string{
 				string(wsOpenMsgTypeBinary): "Binary data open_message.",
@@ -98,6 +99,7 @@ type websocketReader struct {
 
 	openMsgType wsOpenMsgType
 	openMsg     []byte
+	openMsgs    [][]byte
 }
 
 func newWebsocketReaderFromParsed(conf *service.ParsedConfig, mgr bundle.NewManagement) (*websocketReader, error) {
@@ -126,6 +128,15 @@ func newWebsocketReaderFromParsed(conf *service.ParsedConfig, mgr bundle.NewMana
 	ws.openMsgType = wsOpenMsgType(openMsgTypeStr)
 	if openMsgStr, _ = conf.FieldString("open_message"); openMsgStr != "" {
 		ws.openMsg = []byte(openMsgStr)
+	}
+	var openMsgsStr []string
+	if openMsgsStr, _ = conf.FieldStringList("open_messages"); openMsgsStr != nil {
+		var byteSliceSlice [][]byte
+		for _, str := range openMsgsStr {
+			byteSlice := []byte(str)
+			byteSliceSlice = append(byteSliceSlice, byteSlice)
+		}
+		ws.openMsgs = byteSliceSlice
 	}
 	return ws, nil
 }
@@ -178,27 +189,25 @@ func (w *websocketReader) Connect(ctx context.Context) error {
 	}
 
 	if len(w.openMsg) > 0 {
-		if openMsgType == websocket.BinaryMessage {
-			if err := client.WriteMessage(openMsgType, w.openMsg); err != nil {
-				return err
-			}
-		} else if openMsgType == websocket.TextMessage {
-			openMessag := string(w.openMsg)
-			messages := strings.Split(openMessag, "\n")
-			for _, msg := range messages {
+		if err := client.WriteMessage(openMsgType, w.openMsg); err != nil {
+			return err
+		}
+	}
+
+	if len(w.openMsgs) > 0 {
+		if openMsgType == websocket.TextMessage {
+			for _, msg := range w.openMsgs {
 				if len(msg) == 0 {
 					continue
 				}
-
 				// TODO: will need remove such log later cause it may contain sensitive info
-				w.log.Infof("sending open message %s to server", msg)
-				if err := client.WriteMessage(openMsgType, []byte(msg)); err != nil {
+				w.log.Infof("sending open message %s to server", string(msg))
+				if err := client.WriteMessage(openMsgType, msg); err != nil {
 					return err
 				}
-				time.Sleep(3 * time.Second) // TODO : confirm the hand shake here?
+				// time.Sleep(3 * time.Second) // TODO : confirm the hand shake here?
 			}
 		}
-
 	}
 
 	w.client = client
