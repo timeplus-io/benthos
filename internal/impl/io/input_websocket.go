@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 
@@ -176,9 +178,27 @@ func (w *websocketReader) Connect(ctx context.Context) error {
 	}
 
 	if len(w.openMsg) > 0 {
-		if err := client.WriteMessage(openMsgType, w.openMsg); err != nil {
-			return err
+		if openMsgType == websocket.BinaryMessage {
+			if err := client.WriteMessage(openMsgType, w.openMsg); err != nil {
+				return err
+			}
+		} else if openMsgType == websocket.TextMessage {
+			openMessag := string(w.openMsg)
+			messages := strings.Split(openMessag, "\n")
+			for _, msg := range messages {
+				if len(msg) == 0 {
+					continue
+				}
+
+				// TODO: will need remove such log later cause it may contain sensitive info
+				w.log.Infof("sending open message %s to server", msg)
+				if err := client.WriteMessage(openMsgType, []byte(msg)); err != nil {
+					return err
+				}
+				time.Sleep(3 * time.Second) // TODO : confirm the hand shake here?
+			}
 		}
+
 	}
 
 	w.client = client
