@@ -294,6 +294,9 @@ func (n *natsStreamReader) ReadBatch(ctx context.Context) (message.Batch, input.
 }
 
 func (n *natsStreamReader) Close(ctx context.Context) (err error) {
+	go func() {
+		n.disconnect()
+	}()
 	n.interruptOnce.Do(func() {
 		close(n.interruptChan)
 	})
