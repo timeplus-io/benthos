@@ -51,7 +51,9 @@ input:
     seed_brokers: [] # No default (required)
     topics: [] # No default (required)
     regexp_topics: false
-    consumer_group: "" # No default (optional)
+    consumer_group: ""
+    client_id: benthos
+    rack_id: ""
     checkpoint_limit: 1024
     commit_period: 5s
     start_from_oldest: true
@@ -167,6 +169,22 @@ An optional consumer group to consume as. When specified the partitions of speci
 
 
 Type: `string`  
+
+### `client_id`
+
+An identifier for the client connection.
+
+
+Type: `string`  
+Default: `"benthos"`  
+
+### `rack_id`
+
+A rack identifier for this client.
+
+
+Type: `string`  
+Default: `""`  
 
 ### `checkpoint_limit`
 

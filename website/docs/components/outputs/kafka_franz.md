@@ -57,11 +57,21 @@ output:
 output:
   label: ""
   kafka_franz:
+<<<<<<< HEAD
     seed_brokers: [] # No default (required)
     topic: "" # No default (required)
     key: "" # No default (optional)
     partitioner: "" # No default (optional)
     partition: ${! meta("partition") } # No default (optional)
+=======
+    seed_brokers: []
+    topic: ""
+    key: ""
+    partitioner: ""
+    partition: ""
+    client_id: benthos
+    rack_id: ""
+>>>>>>> v4.16.0
     metadata:
       include_prefixes: []
       include_patterns: []
@@ -160,6 +170,22 @@ Type: `string`
 
 partition: ${! meta("partition") }
 ```
+
+### `client_id`
+
+An identifier for the client connection.
+
+
+Type: `string`  
+Default: `"benthos"`  
+
+### `rack_id`
+
+A rack identifier for this client.
+
+
+Type: `string`  
+Default: `""`  
 
 ### `metadata`
 

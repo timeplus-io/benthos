@@ -14,7 +14,7 @@ import (
 func init() {
 	err := service.RegisterOutput(
 		"pulsar",
-		outputConfigSpec(),
+		pulsarSepc(),
 		func(conf *service.ParsedConfig, mgr *service.Resources) (service.Output, int, error) {
 			w, err := newPulsarWriterFromParsed(conf, mgr.Logger())
 			if err != nil {
@@ -31,7 +31,7 @@ func init() {
 	}
 }
 
-func outputConfigSpec() *service.ConfigSpec {
+func pulsarSepc() *service.ConfigSpec {
 	return service.NewConfigSpec().
 		Version("3.43.0").
 		Categories("Services").
@@ -58,6 +58,7 @@ func outputConfigSpec() *service.ConfigSpec {
 		Field(service.NewIntField("max_in_flight").
 			Description("The maximum number of messages to have in flight at a given time. Increase this to improve throughput.").
 			Default(64)).
+		Field(service.NewBatchPolicyField("batching")).
 		Field(authField())
 }
 
@@ -76,6 +77,8 @@ type pulsarWriter struct {
 	rootCasFile string
 	key         *service.InterpolatedString
 	orderingKey *service.InterpolatedString
+
+	batchingPolicy service.BatchPolicy
 }
 
 func newPulsarWriterFromParsed(conf *service.ParsedConfig, log *service.Logger) (p *pulsarWriter, err error) {
@@ -102,6 +105,10 @@ func newPulsarWriterFromParsed(conf *service.ParsedConfig, log *service.Logger) 
 	if p.orderingKey, err = conf.FieldInterpolatedString("ordering_key"); err != nil {
 		return
 	}
+	if p.batchingPolicy, err = conf.FieldBatchPolicy("batching"); err != nil {
+		return
+	}
+
 	return
 }
 
@@ -138,8 +145,16 @@ func (p *pulsarWriter) Connect(ctx context.Context) error {
 		return err
 	}
 
+	period, err := time.ParseDuration(p.batchingPolicy.Period)
+	if err != nil {
+		return err
+	}
+
 	if producer, err = client.CreateProducer(pulsar.ProducerOptions{
-		Topic: p.topic,
+		BatchingMaxPublishDelay: period,
+		BatchingMaxMessages:     uint(p.batchingPolicy.Count),
+		BatchingMaxSize:         uint(p.batchingPolicy.ByteSize),
+		Topic:                   p.topic,
 	}); err != nil {
 		client.Close()
 		return err
@@ -201,6 +216,56 @@ func (p *pulsarWriter) Write(ctx context.Context, msg *service.Message) error {
 	_, err = r.Send(context.Background(), m)
 	return err
 }
+
+func (p *pulsarWriter) WriteBatch(ctx context.Context, batch service.MessageBatch) error {
+	var r pulsar.Producer
+	p.m.RLock()
+	if p.producer != nil {
+		r = p.producer
+	}
+	p.m.RUnlock()
+
+	if r == nil {
+		return component.ErrNotConnected
+	}
+
+	msgs := make([]*pulsar.ProducerMessage, len(batch))
+
+	err := batch.WalkWithBatchedErrors(func(i int, msg *service.Message) error {
+		b, err := msg.AsBytes()
+		if err != nil {
+			return err
+		}
+
+		m := &pulsar.ProducerMessage{
+			Payload: b,
+		}
+		if key := p.key.Bytes(msg); len(key) > 0 {
+			m.Key = string(key)
+		}
+		if orderingKey := p.orderingKey.Bytes(msg); len(orderingKey) > 0 {
+			m.OrderingKey = string(orderingKey)
+		}
+
+		msgs[i] = m
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// TODO: Need to figure out whether we need to handle error individual in callback
+	// or we can just rely on the error returned by the `Flush`
+	for _, m := range msgs {
+		r.SendAsync(context.Background(), m, callback)
+	}
+
+	return p.producer.Flush()
+}
+
+func callback(_ pulsar.MessageID, _ *pulsar.ProducerMessage, _ error) {}
 
 func (p *pulsarWriter) Close(ctx context.Context) error {
 	return p.disconnect(ctx)
