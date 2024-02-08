@@ -26,6 +26,20 @@ func authConfToOptions(auth auth.Config, fs *service.FS) []nats.Option {
 		}
 	}
 
+	// in case a nkey file content is provided, save to a tmp file and load it
+	if auth.NKeyFileContent != "" {
+		if file, err := saveTempNkeyFile(auth.NKeyFileContent); err != nil {
+			opts = append(opts, func(*nats.Options) error { return err })
+		} else {
+			if opt, err := nats.NkeyOptionFromSeed(file); err != nil {
+				opts = append(opts, func(*nats.Options) error { return err })
+			} else {
+				opts = append(opts, opt)
+			}
+			// TODO : clean up temp file
+		}
+	}
+
 	// Previously we used nats.UserCredentials to authenticate. In order to
 	// support a custom FS implementation in our NATS components, we needed to
 	// switch to the nats.UserJWT option, while still preserving the behavior
@@ -52,6 +66,11 @@ func AuthFromParsedConfig(p *service.ParsedConfig) (c auth.Config, err error) {
 	c = auth.New()
 	if p.Contains("nkey_file") {
 		if c.NKeyFile, err = p.FieldString("nkey_file"); err != nil {
+			return
+		}
+	}
+	if p.Contains("nkey_file_content") {
+		if c.NKeyFileContent, err = p.FieldString("nkey_file_content"); err != nil {
 			return
 		}
 	}
@@ -170,4 +189,25 @@ func loadFileContents(filename string, fs *service.FS) ([]byte, error) {
 	defer f.Close()
 
 	return io.ReadAll(f)
+}
+
+func saveTempNkeyFile(content string) (string, error) {
+	dir, err := os.MkdirTemp("", "nats")
+	if err != nil {
+		return "", err
+	}
+	nkeyFile := filepath.Join(dir, "nkeys")
+
+	file, err := os.Create(nkeyFile)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(content)
+	if err != nil {
+		return "", err
+	}
+
+	return nkeyFile, nil
 }
