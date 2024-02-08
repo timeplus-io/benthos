@@ -234,7 +234,6 @@ func (j *jetStreamReader) Connect(ctx context.Context) error {
 				natsConn.Close()
 			}
 		}
-		defer deleteTempNkeyFile()
 	}()
 
 	var opts []nats.Option

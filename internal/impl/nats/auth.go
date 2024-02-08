@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
@@ -16,9 +17,7 @@ import (
 	"github.com/benthosdev/benthos/v4/public/service"
 )
 
-const (
-	nkeyTempFile = "/tmp/temp_nkey_seed.txt"
-)
+const tempFileRecycleInterval = 60 * time.Second
 
 func authConfToOptions(auth auth.Config, fs *service.FS) []nats.Option {
 	var opts []nats.Option
@@ -40,6 +39,11 @@ func authConfToOptions(auth auth.Config, fs *service.FS) []nats.Option {
 			} else {
 				opts = append(opts, opt)
 			}
+			// keep temp file for 60s and delete it
+			go func() {
+				time.Sleep(tempFileRecycleInterval)
+				deleteTempNkeyFile(file)
+			}()
 		}
 	}
 
@@ -195,12 +199,13 @@ func loadFileContents(filename string, fs *service.FS) ([]byte, error) {
 }
 
 func saveNkeyFile(content string) (string, error) {
-	err := os.MkdirAll(filepath.Dir(nkeyTempFile), 0755)
+	dir, err := os.MkdirTemp("", "nats")
 	if err != nil {
 		return "", err
 	}
+	nkeyFile := filepath.Join(dir, "nkeys")
 
-	file, err := os.Create(nkeyTempFile)
+	file, err := os.Create(nkeyFile)
 	if err != nil {
 		return "", err
 	}
@@ -211,12 +216,18 @@ func saveNkeyFile(content string) (string, error) {
 		return "", err
 	}
 
-	return nkeyTempFile, nil
+	return nkeyFile, nil
 }
 
-func deleteTempNkeyFile() {
-	err := os.Remove(nkeyTempFile)
+func deleteTempNkeyFile(path string) {
+	err := os.Remove(path)
 	if err != nil {
 		fmt.Println("Error deleting file:", err)
+	}
+
+	dirPath := filepath.Dir(path)
+	err = os.Remove(dirPath)
+	if err != nil {
+		fmt.Println("Error removing directory:", err)
 	}
 }

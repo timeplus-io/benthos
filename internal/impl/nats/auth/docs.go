@@ -39,7 +39,7 @@ More details [here](https://docs.nats.io/developing-with-nats/security/creds).`
 func FieldSpec() docs.FieldSpec {
 	return docs.FieldObject("auth", "Optional configuration of NATS authentication parameters.").WithChildren(
 		docs.FieldString("nkey_file", "An optional file containing a NKey seed.", "./seed.nk").Optional(),
-		docs.FieldString("nkey_file_content", "An optional file containing a NKey seed string.", "").Optional(),
+		docs.FieldString("nkey_file_content", "An optional string containing a NKey seed.", "").Optional(),
 		docs.FieldString("user_credentials_file", "An optional file containing user credentials which consist of an user JWT and corresponding NKey seed.", "./user.creds").Optional(),
 		docs.FieldString("user_jwt", "An optional plain text user JWT (given along with the corresponding user NKey Seed).").Secret().Optional(),
 		docs.FieldString("user_nkey_seed", "An optional plain text user NKey Seed (given along with the corresponding user JWT).").Secret().Optional(),
