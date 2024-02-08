@@ -31,7 +31,7 @@ func authConfToOptions(auth auth.Config, fs *service.FS) []nats.Option {
 
 	// in case a nkey file content is provided, save to a tmp file and load it
 	if auth.NKeyFileContent != "" {
-		if file, err := saveNkeyFile(auth.NKeyFileContent); err != nil {
+		if file, err := saveTempNkeyFile(auth.NKeyFileContent); err != nil {
 			opts = append(opts, func(*nats.Options) error { return err })
 		} else {
 			if opt, err := nats.NkeyOptionFromSeed(file); err != nil {
@@ -198,7 +198,7 @@ func loadFileContents(filename string, fs *service.FS) ([]byte, error) {
 	return io.ReadAll(f)
 }
 
-func saveNkeyFile(content string) (string, error) {
+func saveTempNkeyFile(content string) (string, error) {
 	dir, err := os.MkdirTemp("", "nats")
 	if err != nil {
 		return "", err
