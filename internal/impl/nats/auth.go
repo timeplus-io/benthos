@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
@@ -16,8 +15,6 @@ import (
 	"github.com/benthosdev/benthos/v4/internal/impl/nats/auth"
 	"github.com/benthosdev/benthos/v4/public/service"
 )
-
-const tempFileRecycleInterval = 60 * time.Second
 
 func authConfToOptions(auth auth.Config, fs *service.FS) []nats.Option {
 	var opts []nats.Option
