@@ -16,6 +16,10 @@ import (
 	"github.com/benthosdev/benthos/v4/public/service"
 )
 
+const (
+	nkeyTempFile = "/tmp/temp_nkey_seed.txt"
+)
+
 func authConfToOptions(auth auth.Config, fs *service.FS) []nats.Option {
 	var opts []nats.Option
 	if auth.NKeyFile != "" {
@@ -23,6 +27,19 @@ func authConfToOptions(auth auth.Config, fs *service.FS) []nats.Option {
 			opts = append(opts, func(*nats.Options) error { return err })
 		} else {
 			opts = append(opts, opt)
+		}
+	}
+
+	// in case a nkey file content is provided, save to a tmp file and load it
+	if auth.NKeyFileContent != "" {
+		if file, err := saveNkeyFile(auth.NKeyFileContent); err != nil {
+			opts = append(opts, func(*nats.Options) error { return err })
+		} else {
+			if opt, err := nats.NkeyOptionFromSeed(file); err != nil {
+				opts = append(opts, func(*nats.Options) error { return err })
+			} else {
+				opts = append(opts, opt)
+			}
 		}
 	}
 
@@ -52,6 +69,11 @@ func AuthFromParsedConfig(p *service.ParsedConfig) (c auth.Config, err error) {
 	c = auth.New()
 	if p.Contains("nkey_file") {
 		if c.NKeyFile, err = p.FieldString("nkey_file"); err != nil {
+			return
+		}
+	}
+	if p.Contains("nkey_file_content") {
+		if c.NKeyFileContent, err = p.FieldString("nkey_file_content"); err != nil {
 			return
 		}
 	}
@@ -170,4 +192,31 @@ func loadFileContents(filename string, fs *service.FS) ([]byte, error) {
 	defer f.Close()
 
 	return io.ReadAll(f)
+}
+
+func saveNkeyFile(content string) (string, error) {
+	err := os.MkdirAll(filepath.Dir(nkeyTempFile), 0755)
+	if err != nil {
+		return "", err
+	}
+
+	file, err := os.Create(nkeyTempFile)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(content)
+	if err != nil {
+		return "", err
+	}
+
+	return nkeyTempFile, nil
+}
+
+func deleteTempNkeyFile() {
+	err := os.Remove(nkeyTempFile)
+	if err != nil {
+		fmt.Println("Error deleting file:", err)
+	}
 }

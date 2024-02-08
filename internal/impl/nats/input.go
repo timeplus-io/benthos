@@ -160,11 +160,13 @@ func (n *natsReader) Connect(ctx context.Context) error {
 	}
 
 	opts = append(opts, authConfToOptions(n.authConf, n.fs)...)
+	defer deleteTempNkeyFile()
 	opts = append(opts, errorHandlerOption(n.log))
 
 	if natsConn, err = nats.Connect(n.urls, opts...); err != nil {
 		return err
 	}
+
 	natsChan := make(chan *nats.Msg, n.prefetchCount)
 
 	if len(n.queue) > 0 {
