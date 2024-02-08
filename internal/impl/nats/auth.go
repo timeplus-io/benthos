@@ -39,11 +39,7 @@ func authConfToOptions(auth auth.Config, fs *service.FS) []nats.Option {
 			} else {
 				opts = append(opts, opt)
 			}
-			// keep temp file for 60s and delete it
-			go func() {
-				time.Sleep(tempFileRecycleInterval)
-				deleteTempNkeyFile(file)
-			}()
+			// TODO : clean up temp file
 		}
 	}
 
@@ -217,17 +213,4 @@ func saveTempNkeyFile(content string) (string, error) {
 	}
 
 	return nkeyFile, nil
-}
-
-func deleteTempNkeyFile(path string) {
-	err := os.Remove(path)
-	if err != nil {
-		fmt.Println("Error deleting file:", err)
-	}
-
-	dirPath := filepath.Dir(path)
-	err = os.Remove(dirPath)
-	if err != nil {
-		fmt.Println("Error removing directory:", err)
-	}
 }
