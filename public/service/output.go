@@ -243,6 +243,7 @@ func (o *OwnedOutput) WriteBatch(ctx context.Context, b MessageBatch) error {
 // Close the output.
 func (o *OwnedOutput) Close(ctx context.Context) error {
 	o.closeOnce.Do(func() {
+		o.o.TriggerCloseNow()
 		close(o.t)
 	})
 	return o.o.WaitForClose(ctx)
