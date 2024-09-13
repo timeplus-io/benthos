@@ -46,6 +46,5 @@ import (
 	_ "github.com/benthosdev/benthos/v4/public/components/splunk"
 	_ "github.com/benthosdev/benthos/v4/public/components/sql"
 	_ "github.com/benthosdev/benthos/v4/public/components/statsd"
-	_ "github.com/benthosdev/benthos/v4/public/components/twitter"
 	_ "github.com/benthosdev/benthos/v4/public/components/wasm"
 )
