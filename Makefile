@@ -3,7 +3,7 @@
 TAGS ?=
 
 GOMAXPROCS         ?= 1
-INSTALL_DIR        ?= $(GOPATH)/bin
+INSTALL_DIR        ?= ./install/bin
 WEBSITE_DIR        ?= ./website
 DEST_DIR           ?= ./target
 PATHINSTBIN        = $(DEST_DIR)/bin

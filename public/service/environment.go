@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"go.opentelemetry.io/otel/trace"
 
@@ -223,14 +224,40 @@ func (e *Environment) RegisterBatchInput(name string, spec *ConfigSpec, ctor Bat
 	}), componentSpec)
 }
 
+type Entries struct {
+}
+
 // WalkInputs executes a provided function argument for every input component
 // that has been registered to the environment.
-func (e *Environment) WalkInputs(fn func(name string, config *ConfigView)) {
+func (e *Environment) WalkInputs() {
+
+	input := map[string]any{}
 	for _, v := range e.internal.InputDocs() {
-		fn(v.Name, &ConfigView{
+		c := ConfigView{
 			component: v,
-		})
+		}
+		yaml, err := c.RenderTPDocs()
+		if err != nil {
+			panic(err)
+		}
+
+		input[v.Name] = map[string]string{
+			"summary": v.Summary,
+			"yaml":    yaml,
+		}
 	}
+
+	out, err := json.Marshal(input)
+	if err != nil {
+		panic(err)
+	}
+
+	fo, err := os.Create("input.json")
+	if err != nil {
+		panic(err)
+	}
+
+	fo.Write(out)
 }
 
 // RegisterOutput attempts to register a new output plugin by providing a
@@ -312,12 +339,34 @@ func (e *Environment) RegisterBatchOutput(name string, spec *ConfigSpec, ctor Ba
 
 // WalkOutputs executes a provided function argument for every output component
 // that has been registered to the environment.
-func (e *Environment) WalkOutputs(fn func(name string, config *ConfigView)) {
+func (e *Environment) WalkOutputs() {
+	output := map[string]any{}
 	for _, v := range e.internal.OutputDocs() {
-		fn(v.Name, &ConfigView{
+		c := ConfigView{
 			component: v,
-		})
+		}
+		yaml, err := c.RenderTPDocs()
+		if err != nil {
+			panic(err)
+		}
+
+		output[v.Name] = map[string]string{
+			"summary": v.Summary,
+			"yaml":    yaml,
+		}
 	}
+
+	out, err := json.Marshal(output)
+	if err != nil {
+		panic(err)
+	}
+
+	fo, err := os.Create("output.json")
+	if err != nil {
+		panic(err)
+	}
+
+	fo.Write(out)
 }
 
 // RegisterProcessor attempts to register a new processor plugin by providing

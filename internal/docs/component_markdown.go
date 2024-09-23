@@ -158,7 +158,7 @@ func createOrderedConfig(t Type, rawExample any, filter FieldFilter) (*yaml.Node
 	return &newNode, nil
 }
 
-func genExampleConfigs(t Type, nest bool, fullConfigExample any) (commonConfigStr, advConfigStr string, err error) {
+func GenExampleConfigs(t Type, nest bool, fullConfigExample any) (commonConfigStr, advConfigStr string, err error) {
 	var advConfig, commonConfig any
 	if advConfig, err = createOrderedConfig(t, fullConfigExample, func(f FieldSpec, _ any) bool {
 		return !f.IsDeprecated
@@ -215,7 +215,7 @@ func (c *ComponentSpec) AsMarkdown(nest bool, fullConfigExample any) ([]byte, er
 	}
 
 	var err error
-	if ctx.CommonConfig, ctx.AdvancedConfig, err = genExampleConfigs(c.Type, nest, fullConfigExample); err != nil {
+	if ctx.CommonConfig, ctx.AdvancedConfig, err = GenExampleConfigs(c.Type, nest, fullConfigExample); err != nil {
 		return nil, err
 	}
 

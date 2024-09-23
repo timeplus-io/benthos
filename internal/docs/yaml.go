@@ -700,6 +700,11 @@ func (f FieldSpec) ToYAML(recurse bool) (*yaml.Node, error) {
 			}
 		}
 	}
+	if f.IsOptional {
+		node.LineComment = "No default (optional)"
+	} else {
+		node.LineComment = "No default (required)"
+	}
 	return &node, nil
 }
 

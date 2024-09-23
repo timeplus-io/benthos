@@ -518,7 +518,46 @@ func (c *ConfigView) RenderDocs() ([]byte, error) {
 		}
 	}
 
-	return c.component.AsMarkdown(!rootOnly, conf)
+	_, _, err := docs.GenExampleConfigs(c.component.Type, !rootOnly, conf)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (c *ConfigView) RenderTPDocs() (string, error) {
+	_, rootOnly := map[string]struct{}{
+		"cache":      {},
+		"rate_limit": {},
+		"processor":  {},
+	}[string(c.component.Type)]
+
+	conf := map[string]any{
+		"type": c.component.Name,
+	}
+	for k, v := range docs.ReservedFieldsByType(c.component.Type) {
+		if k == "plugin" {
+			continue
+		}
+		if v.Default != nil {
+			conf[k] = *v.Default
+		}
+	}
+
+	_, adv, err := docs.GenExampleConfigs(c.component.Type, !rootOnly, conf)
+	if err != nil {
+		return "", err
+	}
+
+	// fo, err := os.Create(fmt.Sprintf("%s/%s.yaml", c.component.Type, c.component.Name))
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// fo.WriteString(adv)
+
+	return adv, nil
 }
 
 //------------------------------------------------------------------------------
